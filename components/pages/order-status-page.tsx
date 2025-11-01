@@ -1,139 +1,130 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
-import StatusCard from "@/components/status-card"
-import { ArrowLeft } from "lucide-react"
+import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import { useRouter } from "next/navigation";
 
-interface OrderStatusPageProps {
-  orderId: string
-  onBackToHome: () => void
-}
+export default function OrderStatusPage({ orderId }: { orderId: string }) {
+  const [status, setStatus] = useState("pending");
+  const [paymentStatus, setPaymentStatus] = useState("unpaid");
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const router = useRouter();
 
-type OrderStatus = "pending" | "accepted" | "paid"
-
-export default function OrderStatusPage({ orderId, onBackToHome }: OrderStatusPageProps) {
-  const [status, setStatus] = useState<OrderStatus>("pending")
-  const [paymentMethod, setPaymentMethod] = useState<"upi" | "later" | null>(null)
-
+  // ✅ Store orderId in localStorage (for refresh recovery)
   useEffect(() => {
-    // Simulate shop owner accepting order after 3 seconds
-    const timer = setTimeout(() => {
-      setStatus("accepted")
-    }, 3000)
+    if (orderId) localStorage.setItem("orderId", String(orderId));
+  }, [orderId]);
 
-    return () => clearTimeout(timer)
-  }, [])
+  // 🧩 1. Fetch latest order details from backend on mount (and reload)
+  useEffect(() => {
+    const existingOrderId = orderId || localStorage.getItem("orderId");
+    if (!existingOrderId) return;
 
-  const statuses = [
-    {
-      step: 1,
-      title: "Pending confirmation",
-      icon: "🕒",
-      completed: status !== "pending",
-    },
-    {
-      step: 2,
-      title: "Accepted by Shop Owner",
-      icon: "✅",
-      completed: status === "accepted" || status === "paid",
-    },
-  ]
+    const fetchOrder = async () => {
+      try {
+        const res = await fetch(`http://localhost:5001/api/orders/${existingOrderId}`);
+        if (!res.ok) throw new Error("Failed to fetch order");
+        const data = await res.json();
+        console.log("📦 Loaded order from backend:", data);
+        setStatus(data.status);
+        setPaymentStatus(data.paymentStatus);
+      } catch (err) {
+        console.error("⚠️ Failed to fetch order:", err);
+      }
+    };
 
+    fetchOrder();
+  }, [orderId]);
+
+  // 🔌 2. Setup socket listeners
+  useEffect(() => {
+    const socketInstance = io("http://localhost:5001", {
+      transports: ["websocket"],
+    });
+
+    socketInstance.on("connect", () => {
+      console.log("✅ Connected as customer:", socketInstance.id);
+      socketInstance.emit("registerRole", "customer");
+
+      // 🧠 If order already exists (after refresh), reconnect to it
+      const existingOrderId = orderId || localStorage.getItem("orderId");
+      if (existingOrderId) {
+        socketInstance.emit("reconnectOrder", existingOrderId);
+      }
+    });
+
+    socketInstance.on("orderUpdate", (updatedOrder: any) => {
+      console.log("📢 Received update:", updatedOrder);
+      const currentOrderId = orderId || localStorage.getItem("orderId");
+      if (String(updatedOrder.id) === String(currentOrderId)) {
+        setStatus(updatedOrder.status);
+        setPaymentStatus(updatedOrder.paymentStatus);
+      }
+    });
+
+    socketInstance.on("connect_error", (err) => {
+      console.error("⚠️ Connection error:", err);
+    });
+
+    setSocket(socketInstance);
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, [orderId]);
+
+  // 💳 3. Handle Payment
+  const handlePayment = (method: "upi" | "later") => {
+    if (!socket) return;
+    const newPaymentStatus = method === "upi" ? "paid" : "unpaid";
+    const currentOrderId = orderId || localStorage.getItem("orderId");
+
+    socket.emit("updatePaymentStatus", {
+      orderId: String(currentOrderId),
+      paymentStatus: newPaymentStatus,
+    });
+
+    setPaymentStatus(newPaymentStatus);
+    if (newPaymentStatus === "paid") {
+      setStatus("paid");
+    }
+
+    // ✅ Reliable navigation fix
+    if (method === "later") {
+      console.log("➡️ Navigating to home...");
+      window.location.href = "/"; // ✅ Works 100% in all cases
+    }
+  };
+
+  // 🧾 4. UI
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-4 shadow-sm">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <button onClick={onBackToHome} className="p-2 hover:bg-muted rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
+      <h1 className="text-2xl font-bold mb-4">🧾 Order #{orderId}</h1>
+      <p className="text-lg mb-2 font-medium">Status: {status}</p>
+      <p className="text-lg mb-4 font-medium">Payment: {paymentStatus}</p>
+
+      {/* 👇 Show payment options only when owner accepts */}
+      {status === "accepted" && paymentStatus === "unpaid" && (
+        <div className="space-y-3 mt-4">
+          <button
+            onClick={() => handlePayment("upi")}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow-md"
+          >
+            💳 Pay Now
           </button>
-          <h1 className="text-2xl font-bold text-primary">Order Status</h1>
+          <button
+            onClick={() => handlePayment("later")}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg shadow-md"
+          >
+            🤝 Pay Later
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Order ID */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-8">
-          <p className="text-muted-foreground text-sm">Order ID</p>
-          <p className="text-lg font-semibold text-primary">{orderId}</p>
-        </motion.div>
-
-        {/* Status Timeline */}
-        <motion.div
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.3 },
-            },
-          }}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4 mb-8"
-        >
-          {statuses.map((s) => (
-            <StatusCard key={s.step} {...s} />
-          ))}
-        </motion.div>
-
-        {/* Payment Options - Show when accepted */}
-        {status === "accepted" && !paymentMethod && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-2xl p-6 border border-border/50 mb-6"
-          >
-            <h3 className="text-lg font-semibold text-foreground mb-4">Payment Method</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => setPaymentMethod("upi")}
-                className="w-full bg-gradient-to-r from-primary to-accent text-white py-4 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95"
-              >
-                💳 Pay Now (UPI)
-              </button>
-              <button
-                onClick={() => setPaymentMethod("later")}
-                className="w-full bg-secondary text-secondary-foreground py-4 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95"
-              >
-                🤝 Pay Later
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Payment Success */}
-        {paymentMethod && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center py-8"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.6 }}
-              className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4"
-            >
-              <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white text-2xl">
-                ✓
-              </div>
-            </motion.div>
-            <h2 className="text-2xl font-bold text-primary mb-2">
-              {paymentMethod === "upi" ? "Payment Completed!" : "Order Confirmed"}
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              {paymentMethod === "upi" ? "Thank you for your payment!" : "Pay when you collect your order"}
-            </p>
-            <button
-              onClick={onBackToHome}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-semibold transition-all hover:shadow-lg active:scale-95"
-            >
-              Back to Home
-            </button>
-          </motion.div>
-        )}
-      </div>
+      {paymentStatus === "paid" && (
+        <p className="text-green-600 font-semibold mt-6 text-lg">
+          ✅ Payment Successful! Thank you.
+        </p>
+      )}
     </div>
-  )
+  );
 }

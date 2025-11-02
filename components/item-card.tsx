@@ -10,6 +10,7 @@ interface ItemCardProps {
     id: number
     name: string
     price: number
+    image?: string
   }
 }
 
@@ -17,13 +18,8 @@ export default function ItemCard({ item }: ItemCardProps) {
   const [quantity, setQuantity] = useState(0)
   const { addItem } = useCart()
 
-  const handleAdd = () => {
-    setQuantity((q) => q + 1)
-  }
-
-  const handleRemove = () => {
-    setQuantity((q) => Math.max(0, q - 1))
-  }
+  const handleAdd = () => setQuantity((q) => q + 1)
+  const handleRemove = () => setQuantity((q) => Math.max(0, q - 1))
 
   const handleAddToCart = () => {
     if (quantity > 0) {
@@ -37,16 +33,25 @@ export default function ItemCard({ item }: ItemCardProps) {
     }
   }
 
-  const imageUrl = `/placeholder.svg?height=200&width=200&query=${encodeURIComponent(item.name)}`
+  // ✅ Use real image if available, else placeholder
+  const imageUrl =
+    item.image && item.image.trim() !== ""
+      ? item.image
+      : `/placeholder.svg?height=200&width=200&query=${encodeURIComponent(item.name)}`
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
       className="bg-card rounded-2xl overflow-hidden border border-border/30 shadow-md hover:shadow-lg transition-shadow"
     >
-      {/* Image */}
+      {/* ✅ Image */}
       <div className="aspect-square overflow-hidden bg-gradient-to-br from-primary/10 to-accent/10 relative">
-        <img src={imageUrl || "/placeholder.svg"} alt={item.name} className="w-full h-full object-cover" />
+        <img
+          src={imageUrl}
+          alt={item.name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
       </div>
 
       {/* Content */}
@@ -74,7 +79,7 @@ export default function ItemCard({ item }: ItemCardProps) {
           </div>
         )}
 
-        {/* Add to Cart Button (when quantity > 0) */}
+        {/* Confirm Button */}
         {quantity > 0 && (
           <motion.button
             initial={{ opacity: 0, y: 10 }}

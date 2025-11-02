@@ -5,7 +5,15 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/context/cart-context";
 import CartSummary from "@/components/cart-summary";
 import { ArrowLeft } from "lucide-react";
-import { socket } from "@/utils/socket";
+import { io } from "socket.io-client";
+
+// ✅ Use environment variable for backend socket URL
+const SOCKET_SERVER_URL =
+  process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:5001";
+export const socket = io(SOCKET_SERVER_URL, {
+  transports: ["websocket"],
+  withCredentials: true,
+});
 
 interface CheckoutPageProps {
   onOrderSubmit: (orderId: string) => void;

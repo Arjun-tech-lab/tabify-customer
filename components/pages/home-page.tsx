@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import ItemCard from "@/components/item-card"
-import CartBar from "@/components/cart-bar"
-import { useCart } from "@/context/cart-context"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import ItemCard from "@/components/item-card";
+import CartBar from "@/components/cart-bar";
+import { useCart } from "@/context/cart-context";
 
 interface Item {
-  id: number
-  name: string
-  price: number
-  category: string
-  image: string
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  image: string;
 }
 
 const ITEMS: Item[] = [
@@ -28,33 +28,33 @@ const ITEMS: Item[] = [
   { id: 8, name: "Chips", price: 15, category: "Others", image: "https://www.quickpantry.in/cdn/shop/products/lay-s-chile-limon-potato-chips-32-g-quick-pantry.jpg?v=1710539171" },
   { id: 9, name: "Chewing Gum", price: 5, category: "Others", image: "https://www.kroger.com/product/images/large/front/0002200000172" },
   { id: 10, name: "Water Bottle", price: 10, category: "Others", image: "https://i0.wp.com/sipnjoy.in/wp-content/uploads/2022/01/R76HHCoZE1j6B8U7cymd.jpg?fit=360%2C380&ssl=1" },
-]
+];
 
 interface HomePageProps {
-  onCheckout: () => void
+  onCheckout: () => void;
 }
 
 export default function HomePage({ onCheckout }: HomePageProps) {
-  const { getTotalItems } = useCart()
-  const [viewingCategory, setViewingCategory] = useState<string | null>(null)
+  const { getTotalItems } = useCart();
+  const [viewingCategory, setViewingCategory] = useState<string | null>(null);
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  }
+  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
-  }
+  };
 
-  const cigaretteItems = ITEMS.filter((item) => item.category === "Cigarettes")
-  const otherItems = ITEMS.filter((item) => item.category === "Others")
+  const cigaretteItems = ITEMS.filter((item) => item.category === "Cigarettes");
+  const otherItems = ITEMS.filter((item) => item.category === "Others");
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <motion.div
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-10 bg-gradient-to-b from-primary/10 to-transparent px-4 py-6 shadow-sm"
@@ -67,26 +67,25 @@ export default function HomePage({ onCheckout }: HomePageProps) {
               : "Welcome! Order your favorite items during rush hours"}
           </p>
         </div>
-      </motion.div>
+      </motion.header>
 
       {/* Category View */}
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        {/* 🧾 MAIN MENU */}
-        {!viewingCategory && (
+      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        {!viewingCategory ? (
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            // ✅ On mobile → 2 columns and tighter gap
             className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-4"
           >
-            {/* Cigarettes placeholder card */}
+            {/* Cigarettes card */}
             <motion.div key="cigarettes" variants={itemVariants}>
               <div className="border rounded-2xl p-3 sm:p-4 shadow-sm bg-card hover:shadow-md transition flex flex-col justify-between h-full">
                 <img
                   src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Cigarette_DS.jpg"
                   alt="Cigarettes"
                   className="rounded-xl mb-2 sm:mb-3 w-full h-32 sm:h-40 object-cover"
+                  loading="lazy"
                 />
                 <div>
                   <h3 className="text-base sm:text-lg font-semibold text-primary mb-1">🚬 Cigarettes</h3>
@@ -103,17 +102,15 @@ export default function HomePage({ onCheckout }: HomePageProps) {
               </div>
             </motion.div>
 
-            {/* Render other items */}
+            {/* Other items */}
             {otherItems.map((item) => (
               <motion.div key={item.id} variants={itemVariants}>
                 <ItemCard item={item} />
               </motion.div>
             ))}
           </motion.div>
-        )}
-
-        {/* 🧾 CIGARETTE SUBVIEW */}
-        {viewingCategory === "Cigarettes" && (
+        ) : (
+          // 🧾 Cigarette Subview
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -137,10 +134,10 @@ export default function HomePage({ onCheckout }: HomePageProps) {
             ))}
           </motion.div>
         )}
-      </div>
+      </main>
 
       {/* Sticky Cart Bar */}
       {getTotalItems() > 0 && <CartBar totalItems={getTotalItems()} onCheckout={onCheckout} />}
     </div>
-  )
+  );
 }

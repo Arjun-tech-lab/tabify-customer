@@ -10,6 +10,10 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const router = useRouter();
 
+  // 🌍 Backend base URL from environment variable
+  const BACKEND_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001";
+
   // ✅ Store orderId in localStorage (for refresh recovery)
   useEffect(() => {
     if (orderId) localStorage.setItem("orderId", String(orderId));
@@ -22,7 +26,7 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
 
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`http://localhost:5001/api/orders/${existingOrderId}`);
+        const res = await fetch(`${BACKEND_URL}/api/orders/${existingOrderId}`);
         if (!res.ok) throw new Error("Failed to fetch order");
         const data = await res.json();
         console.log("📦 Loaded order from backend:", data);
@@ -34,19 +38,24 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, BACKEND_URL]);
 
   // 🔌 2. Setup socket listeners
   useEffect(() => {
-    const socketInstance = io("http://localhost:5001", {
+    const SOCKET_URL =
+      process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:5001";
+
+    console.log("🔌 Connecting to socket:", SOCKET_URL);
+
+    const socketInstance = io(SOCKET_URL, {
       transports: ["websocket"],
+      withCredentials: true,
     });
 
     socketInstance.on("connect", () => {
       console.log("✅ Connected as customer:", socketInstance.id);
       socketInstance.emit("registerRole", "customer");
 
-      // 🧠 If order already exists (after refresh), reconnect to it
       const existingOrderId = orderId || localStorage.getItem("orderId");
       if (existingOrderId) {
         socketInstance.emit("reconnectOrder", existingOrderId);
@@ -88,10 +97,9 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
       setStatus("paid");
     }
 
-    // ✅ Reliable navigation fix
     if (method === "later") {
       console.log("➡️ Navigating to home...");
-      window.location.href = "/"; // ✅ Works 100% in all cases
+      window.location.href = "/";
     }
   };
 
@@ -102,7 +110,6 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
       <p className="text-lg mb-2 font-medium">Status: {status}</p>
       <p className="text-lg mb-4 font-medium">Payment: {paymentStatus}</p>
 
-      {/* 👇 Show payment options only when owner accepts */}
       {status === "accepted" && paymentStatus === "unpaid" && (
         <div className="space-y-3 mt-4">
           <button

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import ItemCard from "@/components/item-card";
 import CartBar from "@/components/cart-bar";
 import { useCart } from "@/context/cart-context";
+import UserRegistrationModal from "@/components/UserRegistrationModal";
 
 interface Item {
   id: number;
@@ -53,6 +54,9 @@ export default function HomePage({ onCheckout }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* ✅ OTP Modal for first-time users */}
+      <UserRegistrationModal />
+
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}

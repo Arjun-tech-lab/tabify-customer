@@ -5,7 +5,7 @@ import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 
 export default function OrderStatusPage({ orderId }: { orderId: string }) {
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState("requested");
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [socket, setSocket] = useState<Socket | null>(null);
   const router = useRouter();
@@ -84,6 +84,7 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
   // 💳 3. Handle Payment
   const handlePayment = (method: "upi" | "later") => {
     if (!socket) return;
+
     const newPaymentStatus = method === "upi" ? "paid" : "unpaid";
     const currentOrderId = orderId || localStorage.getItem("orderId");
 
@@ -93,8 +94,9 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
     });
 
     setPaymentStatus(newPaymentStatus);
+
     if (newPaymentStatus === "paid") {
-      setStatus("paid");
+      setStatus("completed");
     }
 
     if (method === "later") {
@@ -109,6 +111,12 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
       <h1 className="text-2xl font-bold mb-4">🧾 Order #{orderId}</h1>
       <p className="text-lg mb-2 font-medium">Status: {status}</p>
       <p className="text-lg mb-4 font-medium">Payment: {paymentStatus}</p>
+
+      {status === "requested" && (
+        <p className="text-yellow-600 font-medium mt-4">
+          ⏳ Waiting for shop owner to accept your order
+        </p>
+      )}
 
       {status === "accepted" && paymentStatus === "unpaid" && (
         <div className="space-y-3 mt-4">

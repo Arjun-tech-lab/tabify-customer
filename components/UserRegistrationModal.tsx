@@ -11,9 +11,11 @@ export default function UserRegistrationModal() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // ✅ Check for sessionKey (NOT full user object)
+    // ✅ Show modal ONLY if sessionKey is missing
     const sessionKey = localStorage.getItem("tabifySessionKey");
-    if (!sessionKey) setShowModal(true);
+    if (!sessionKey) {
+      setShowModal(true);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,12 +39,12 @@ export default function UserRegistrationModal() {
       );
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to register");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to register");
+      }
 
-      // ✅ KEEP existing behavior (do not break anything)
+      // ✅ Store user + sessionKey (CRITICAL)
       localStorage.setItem("tabifyUser", JSON.stringify(data.user));
-
-      // ✅ CRITICAL FIX: store sessionKey separately
       localStorage.setItem("tabifySessionKey", data.user.sessionKey);
 
       setShowModal(false);

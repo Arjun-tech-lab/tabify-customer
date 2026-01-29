@@ -10,7 +10,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: "TapriLink - Order Tea & Snacks",
+  title: "Tabify",
   description: "Order tea, snacks, and more from your favorite local shop",
   generator: "v0.app",
 }

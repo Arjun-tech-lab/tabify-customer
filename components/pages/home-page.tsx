@@ -1,11 +1,12 @@
-"use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ItemCard from "@/components/item-card";
 import CartBar from "@/components/cart-bar";
 import { useCart } from "@/context/cart-context";
 import UserRegistrationModal from "@/components/UserRegistrationModal";
+import { useRouter } from "next/navigation";
+import {  useEffect } from "react";
+
 
 interface Item {
   id: number;
@@ -36,8 +37,26 @@ interface HomePageProps {
 export default function HomePage({ onCheckout }: HomePageProps) {
   const { getTotalItems } = useCart();
   const [viewingCategory, setViewingCategory] = useState<string | null>(null);
+ const [customerName, setCustomerName] = useState<string | null>(null);
+useEffect(() => {
+  const storedUser = localStorage.getItem("tabifyUser");
 
-  // ✅ ONLY ADDED FEATURE
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      if (user?.name) {
+        setCustomerName(user.name);
+      }
+    } catch (err) {
+      console.error("Failed to parse tabifyUser");
+    }
+  }
+}, []);
+
+  
+
+  const router = useRouter();
+
   const handleSwitchUser = () => {
     localStorage.removeItem("tabifySessionKey");
     localStorage.removeItem("tabifyUser");
@@ -48,14 +67,14 @@ export default function HomePage({ onCheckout }: HomePageProps) {
   const cigaretteItems = ITEMS.filter(
     (item) => item.category === "Cigarettes"
   );
-  const otherItems = ITEMS.filter((item) => item.category === "Others");
+  const otherItems = ITEMS.filter(
+    (item) => item.category === "Others"
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Registration modal (existing) */}
       <UserRegistrationModal />
 
-      {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -63,36 +82,49 @@ export default function HomePage({ onCheckout }: HomePageProps) {
       >
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary mb-2">☕ Tabify</h1>
+            <h1 className="text-3xl font-bold text-primary mb-2">
+              ☕ Tabify
+            </h1>
             <p className="text-muted-foreground text-sm">
-              {viewingCategory
-                ? `Select your preferred ${viewingCategory}`
-                : "Welcome! Order your favorite items during rush hours"}
-            </p>
+  {customerName
+    ? `Hi ${customerName}  `
+    : viewingCategory
+    ? `Select your preferred ${viewingCategory}`
+    : "Welcome! Order your favorite items during rush hours"}
+</p>
+
           </div>
 
-          {/* ✅ Switch User button */}
-          <button
-            onClick={handleSwitchUser}
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            Switch User
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => router.push("/my-orders")}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              My Orders
+            </button>
+
+            <button
+              onClick={handleSwitchUser}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Switch User
+            </button>
+          </div>
         </div>
       </motion.header>
 
-      {/* Main content */}
       <main className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {!viewingCategory ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-4">
-            {/* Cigarettes card */}
             <div className="border rounded-2xl p-3 sm:p-4 shadow-sm bg-card flex flex-col justify-between">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Cigarette_DS.jpg"
                 alt="Cigarettes"
                 className="rounded-xl mb-3 w-full h-32 object-cover"
               />
-              <h3 className="font-semibold text-primary mb-1">🚬 Cigarettes</h3>
+              <h3 className="font-semibold text-primary mb-1">
+                🚬 Cigarettes
+              </h3>
               <p className="text-sm text-muted-foreground mb-3">
                 View all types
               </p>
@@ -126,7 +158,6 @@ export default function HomePage({ onCheckout }: HomePageProps) {
         )}
       </main>
 
-      {/* Cart Bar */}
       {getTotalItems() > 0 && (
         <CartBar totalItems={getTotalItems()} onCheckout={onCheckout} />
       )}

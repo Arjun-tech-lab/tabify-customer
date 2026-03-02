@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { useRouter } from "next/navigation";
 
-export default function OrderStatusPage({ orderId }: { orderId: string }) {
-  const router = useRouter();
+export default function OrderStatusPage({
+  orderId,
+  onBackToHome,
+}: {
+  orderId: string;
+  onBackToHome: () => void;
+}) {
 
   const [status, setStatus] = useState<
     "requested" | "accepted" | "completed"
@@ -106,13 +110,6 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
         !showHomeButton && (
           <div className="space-y-3 mt-4">
             <button
-              onClick={() => handlePayment("upi")}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow-md"
-            >
-              💳 Pay Now
-            </button>
-
-            <button
               onClick={() => handlePayment("later")}
               className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg shadow-md"
             >
@@ -128,7 +125,7 @@ export default function OrderStatusPage({ orderId }: { orderId: string }) {
           </p>
 
           <button
-            onClick={() => router.push("/")}
+            onClick={onBackToHome}
             className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg shadow-md"
           >
             🏠 Go to Home
